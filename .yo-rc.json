@@ -1,0 +1,10 @@
+{
+  "@okta/generator-samples": {
+    "parentType": "sample",
+    "version": "1.12.0",
+    "type": "end-to-end",
+    "environment": "PHP",
+    "framework": "Slim",
+    "name": "samples-php-slim"
+  }
+}
