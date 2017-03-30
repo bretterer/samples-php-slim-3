@@ -196,6 +196,13 @@ describe('Authorization Code', () => {
         const req = mockOktaRequests(mock).then(validateCallback);
         return util.shouldNotError(req, errors.CODE_TOKEN_INVALID_HEADER_CONNECTION);
       });
+
+      it('sets the "content-length" header to "0"', () => {
+        const mock = util.expand('req.headers.content-length', '0');
+        mock.keysOptional = true;
+        const req = mockOktaRequests(mock).then(validateCallback);
+        return util.shouldNotError(req, errors.CODE_TOKEN_INVALID_HEADER_CONTENT_LENGTH);
+      });
     });
 
     describe('Redirecting to profile on successful token response', () => {
@@ -332,7 +339,6 @@ describe('Authorization Code', () => {
     describe('After authentication and user session is set', () => {
       it('does not redirect', () => {
         const req = createSession().then(agent => agent.get(PROFILE_PATH));
-
         return util.shouldNotRedirect(req, errors.CODE_PROFILE_NO_REDIRECT);
       });
       util.itLoadsTemplateFor('profile', () => createSession().then(agent => agent.get(PROFILE_PATH)));

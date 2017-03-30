@@ -23,8 +23,7 @@ $container = $app->getContainer();
 $container['view'] = function ($container) {
 	$view = new \Slim\Views\Mustache([
 		'cache' => __DIR__ . '/../storage/cache/mustache',
-		'loader' => new Mustache_Loader_FilesystemLoader(__DIR__ . '/../templates'),
-		'partials_loader' => new Mustache_Loader_FilesystemLoader(__DIR__ . '/../templates/partials')
+		'loader' => new Mustache_Loader_FilesystemLoader(__DIR__ . '/../templates')
 	]);
 
 	return $view;

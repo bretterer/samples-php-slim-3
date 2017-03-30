@@ -8,7 +8,6 @@
     },
     "server": {
       "staticDir": "src/public/assets",
-      "startSignal": "Document root is",
       "port": 3000,
       "framework": "Slim",
       "environment": "PHP"

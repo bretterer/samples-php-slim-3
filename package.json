@@ -1,16 +1,16 @@
 {
-  "name": "@okta/samples-php-slim",
+  "name": "@okta/samples-php-slim-3",
   "version": "0.0.1",
   "publishConfig": {
     "registry": "https://artifacts.aue1d.saasure.com/artifactory/api/npm/npm-okta"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/okta/samples-php-slim.git"
+    "url": "https://github.com/okta/samples-php-slim-3.git"
   },
-  "bugs": "https://github.com/okta/samples-php-slim/issues",
+  "bugs": "https://github.com/okta/samples-php-slim-3/issues",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/okta/samples-php-slim",
+  "homepage": "https://github.com/okta/samples-php-slim-3",
   "scripts": {
     "test:e2e": "webdriver-manager update && protractor test/e2e/conf.js",
     "mock-okta": "node tools/mock-okta",
@@ -22,7 +22,7 @@
     "test:docs": "mocha test/docs/specs/ --bail",
     "test": "npm run test:app-server-all && npm run test:docs && npm run test:e2e",
     "prestart": "build-frontend",
-    "start": "php -S 0.0.0.0:3000 -t src/public"
+    "start": "php -S 0.0.0.0:3000 -t src/public &> /dev/null"
   },
   "dependencies": {
     "@okta/samples-js-angular-1": "1.9.0",
@@ -38,10 +38,12 @@
     "cli-table2": "0.2.0",
     "connect": "3.5.0",
     "diff": "3.0.1",
+    "forever-monitor": "1.7.1",
     "jasmine-reporters": "2.2.0",
     "jws": "3.1.4",
     "minimist": "1.2.0",
     "protractor": "4.0.4",
+    "wait-on": "2.0.2",
     "yakbak": "2.5.0"
   }
 }

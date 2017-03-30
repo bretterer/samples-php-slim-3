@@ -64,13 +64,13 @@ $app->get('/authorization-code/callback', function (\Slim\Http\Request $request,
 	$output = curl_exec($ch);
 	$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
-	if(curl_error($ch))
-	{
+	if(curl_error($ch)) {
 		$httpcode = 500;
 	}
 
 	$decodedOutput = json_decode($output);
 
+    curl_close($ch);
 
 	try {
 		$tokenParts = explode('.',$decodedOutput->id_token);
@@ -78,11 +78,9 @@ $app->get('/authorization-code/callback', function (\Slim\Http\Request $request,
 			return $response->withStatus(401);
 		}
 
-		$decoded = JOSE_JWT::decode($decodedOutput->id_token);
+		$decoded_id_token = JOSE_JWT::decode($decodedOutput->id_token);
 
-		$kid = $decoded->header['kid'];
-
-		curl_close($ch);
+		$kid = $decoded_id_token->header['kid'];
 
 		$jwk = null;
 
@@ -120,9 +118,9 @@ $app->get('/authorization-code/callback', function (\Slim\Http\Request $request,
 		}
 
 		try {
-			$key = JOSE_JWK::decode((array)$jwk); # => phpseclib\Crypt\RSA instance
+			$key = JOSE_JWK::decode((array)$jwk);
 
-			$jws = JOSE_JWT::decode($decoded);
+			$jws = JOSE_JWT::decode($decoded_id_token);
 
 			if($jws->header['alg'] != $jwk->alg) {
 				return $response->withStatus(401);

@@ -21,7 +21,6 @@ describe('The Basics', () => {
       util.get('/')
       .then(res => expect(res).to.have.status(200))
       .catch((err) => {
-        console.log(err);
         if (err.code === 'ECONNREFUSED') {
           throw new Error(errors.SERVER_PORT);
         }

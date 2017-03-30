@@ -53,26 +53,29 @@ $ node -v
 
 Then, clone this sample from GitHub and install the front-end dependencies:
 ```bash
-# Clone the repo and navigate to the samples-php-slim dir
-$ git clone git@github.com:okta/samples-php-slim.git && cd samples-php-slim
+# Clone the repo and navigate to the samples-php-slim-3 dir
+$ git clone git@github.com:okta/samples-php-slim-3.git && cd samples-php-slim-3
 
 # Install the front-end dependencies
-[samples-php-slim]$ npm install
+[samples-php-slim-3]$ npm install
 ```
 
-{{ SAMPLE-DEVELOPER: ADD EXTRA SETUP HERE }}
+After all the front-end dependencies install, you will need to install all composer packages:
+```bash
+[samples-php-slim-3]$ cd src; composer install
+```
 
 
 ## Quick Start
 
-Start the back-end for your sample application with `npm start` or ` {{ SAMPLE-DEVELOPER: ADD START SCRIPT HERE }} `. This will start the app server on [http://localhost:3000](http://localhost:3000).
+Start the back-end for your sample application with `npm start` or ` php -S 0.0.0.0:3000 -t src/public `. This will start the app server on [http://localhost:3000](http://localhost:3000).
 
 By default, this application uses a mock authorization server which responds to API requests like a configured Okta org - it's useful if you haven't yet set up OpenID Connect but would still like to try this sample. 
 
 To start the mock server, run the following in a second terminal window:
 ```bash
-# Starts the mock Okta server at http://127.0.0.01:7777
-[samples-php-slim]$ npm run mock-okta
+# Starts the mock Okta server at http://127.0.0.1:7777
+[samples-php-slim-3]$ npm run mock-okta
 ```
 
 If you'd like to test this sample against your own Okta org, follow [these steps to setup an OpenID Connect app](docs/assets/oidc-app-setup.md). Then, replace the *oidc* settings in `samples.config.json` to point to your new app:
@@ -182,7 +185,7 @@ By default, this end-to-end sample ships with our [Angular 1 front-end sample](h
 
     ```bash
     # Use the NPM module for the front-end you want to install. I.e. for React:
-    [samples-php-slim]$ npm install @okta/samples-js-react
+    [samples-php-slim-3]$ npm install @okta/samples-js-react
     ```
 
 3. Restart the server. You should be up and running with the new front-end!
@@ -215,12 +218,50 @@ Two cookies are created after authentication: `okta-oauth-nonce` and `okta-auth-
 
 In this sample, we verify the state here:
 
-{{ SAMPLE-DEVELOPER: ADD CHECKING FOR COOKIES HERE }}
+```php
+if ( $request->getCookieParam('okta-oauth-state') != $request->getQueryParam('state')) {
+    return $response->withStatus(401);
+}
+```
 
 ### Code Exchange
 Next, we exchange the returned authorization code for an `id_token` and/or `access_token`. You can choose the best [token authentication method](http://developer.okta.com/docs/api/resources/oauth2.html#token-request) for your application. In this sample, we use the default token authentication method `client_secret_basic`:
 
-{{ SAMPLE-DEVELOPER: ADD TOKEN REQUEST CODE HERE }}
+```php
+$authHeaderSecret = base64_encode($config->oidc->clientId . ':' . $config->oidc->clientSecret);
+
+$query = http_build_query([
+    'grant_type' => 'authorization_code',
+    'code' => $request->getQueryParam('code'),
+    'redirect_uri' => $config->oidc->redirectUri
+]);
+
+$headers = [
+    'Authorization: Basic ' . $authHeaderSecret,
+    'Accept: application/json',
+    'Content-Type: application/x-www-form-urlencoded',
+    'Connection: close',
+    'Content-Length: 0'
+];
+$url = $config->oidc->oktaUrl . '/oauth2/v1/token?' . $query;
+
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_HEADER, 0);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+curl_setopt($ch, CURLOPT_POST, 1);
+
+
+$output = curl_exec($ch);
+$httpcode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+if(curl_error($ch))
+{
+	$httpcode = 500;
+}
+$decodedOutput = json_decode($output);
+```
 
 A successful response returns an `id_token` which looks similar to:
 ```
@@ -240,7 +281,7 @@ ntFBNjluFhNLJIUkEFovEDlfuB4tv_M8BM75celdy3jkpOurg
 ### Validation
 After receiving the `id_token`, we [validate](http://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation) the token and its claims to prove its integrity. 
 
-In this sample, we use the {{ SAMPLE-DEVELOPER: ADD TOKEN LIBRARY INFO HERE }} library to decode and validate the token.
+In this sample, we use the ["gree/jose"](https://packagist.org/packages/gree/jose) library to decode and validate the token.
 
 There are a couple things we need to verify:
 
@@ -258,7 +299,39 @@ For example:
 - If the `kid` has been cached, use it to validate the signature.
 - If not, make a request to the `jwks_uri`. Cache the new `jwks`, and use the response to validate the signature.
 
-{{ SAMPLE-DEVELOPER: ADD JWKS AND CACHING CODE HERE }}
+```php
+$jwk = null;
+
+if(file_exists(__DIR__ . '/../../src/storage/cache/' . $kid)) {
+    $jwk = file_get_contents(__DIR__ . '/../../src/storage/cache/' . $kid);
+    $jwk = unserialize($jwk);
+}
+else {
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $config->oidc->oktaUrl . '/oauth2/v1/keys');
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_HEADER, 0);
+
+    $output = curl_exec($ch);
+
+    curl_close($ch);
+
+    $output = json_decode($output);
+
+    foreach ($output->keys as $key) {
+        // poormans cache
+        $s = serialize($key);
+        file_put_contents(__DIR__ . '/../../src/storage/cache/' . $key->kid, $s);
+
+        $cachedJwks[$key->kid] = $key;
+        if ($key->kid == $kid) {
+            $jwk = $key;
+        }
+    }
+}
+
+```
 
 
 #### Verify fields
@@ -269,31 +342,68 @@ Verify the `id_token` from the [Code Exchange](#code-exchange) contains our expe
   - The `clientId` stored in our configuration matches the `aud` claim
   - If the token expiration time has passed, the token must be revoked
 
-{{ SAMPLE-DEVELOPER: ADD VERIFY FIELDS CODE HERE }}
+```php
+
+if($res->claims['iss'] != $config->oidc->oktaUrl) {
+    return $response->withStatus(401);
+}
+
+if($res->claims['aud'] != $config->oidc->clientId) {
+    return $response->withStatus(401);
+}
+
+if($res->claims['exp'] < time()-300) {
+    return $response->withStatus(401);
+}
+
+
+```
 
 
 #### Verify issued time
 The `iat` value indicates what time the token was "issued at". We verify that this claim is valid by checking that the token was not issued in the future, with some leeway for clock skew.
 
-{{ SAMPLE-DEVELOPER: ADD VERIFY IAT CODE HERE }}
+```php
+if($res->claims['iat'] > time()+300) {
+    return $response->withStatus(401);
+}
+```
 
 
 #### Verify nonce
 To mitigate replay attacks, verify that the `nonce` value in the `id_token` matches the `nonce` stored in the cookie `okta-oauth-nonce`.
 
-{{ SAMPLE-DEVELOPER: ADD VERIFY NONCE CODE HERE }}
+```php
+if($res->claims['nonce'] != $request->getCookieParam('okta-oauth-nonce')) {
+    return $response->withStatus(401);
+}
+```
 
 ### Set user session
 If the `id_token` passes validation, we can then set the `user` session in our application.
 
 In a production app, this code would lookup the `user` from a user store and set the session for that user. However, for simplicity, in this sample we set the session with the claims from the `id_token`.
 
-{{ SAMPLE-DEVELOPER: ADD SETTING USER SESSION CODE HERE }}
+```php
+$userData = [
+    'email' => $res->claims['email'],
+    'claims' => $res->claims
+];
+
+
+$userCookie = new Cookie('userData', serialize($userData), time() + 30, '/', 'localhost', false, false);
+
+return $response->withAddedHeader('Set-Cookie', $userCookie)->withRedirect('/authorization-code/profile');
+```
 
 ### Logout
 In Slim, you can clear the the user session by:
 
-{{ SAMPLE-DEVELOPER: ADD LOGOUT CODE HERE }}
+```php
+$userCookie = new Cookie('userData', 'EXPIRED', 1, '/', 'localhost', false, false);
+
+return $response->withAddedHeader('Set-Cookie', $userCookie)->withRedirect('/');
+```
 
 The Okta session is terminated in our client-side code.
 
