@@ -22,7 +22,9 @@
     "test:docs": "mocha test/docs/specs/ --bail",
     "test": "npm run test:app-server-all && npm run test:docs && npm run test:e2e",
     "prestart": "build-frontend",
-    "start": "php -S 0.0.0.0:3000 -t src/public &> /dev/null"
+    "start": "php -S 0.0.0.0:3000 -t src/public &> /dev/null",
+    "snyk-protect": "snyk protect",
+    "prepublish": "npm run snyk-protect"
   },
   "dependencies": {
     "@okta/samples-js-angular-1": "1.9.0",
@@ -31,7 +33,8 @@
     "chai-http": "3.0.0",
     "lodash.merge": "4.6.0",
     "mocha": "3.1.2",
-    "pem-jwk": "1.5.1"
+    "pem-jwk": "1.5.1",
+    "snyk": "^1.30.1"
   },
   "devDependencies": {
     "chalk": "1.1.3",
@@ -45,5 +48,6 @@
     "protractor": "4.0.4",
     "wait-on": "2.0.2",
     "yakbak": "2.5.0"
-  }
+  },
+  "snyk": true
 }
